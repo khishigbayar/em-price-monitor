@@ -2,16 +2,17 @@ from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import pandas as pd
-from datetime import date
-from fastapi.responses import FileResponse
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+import pandas as pd
+from datetime import datetime
 import os
 from dotenv import load_dotenv
 
+# ============================
+# PRODUCT MAP
 # ============================
 PRODUCT_MAP = {
     "https://em.hdc.gov.mn/productMap/113": "Аминовит",
@@ -51,7 +52,6 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASHBOARD_DIR = os.path.join(BASE_DIR, "dashboard")
 
-# dashboard доторх static файлууд (js, css)
 app.mount("/static", StaticFiles(directory=DASHBOARD_DIR), name="static")
 
 # ======================
@@ -79,20 +79,21 @@ def fetch_all(sql, params=None):
 # ======================
 @app.get("/")
 def serve_dashboard():
-    """
-    http://SERVER:8000/
-    """
     return FileResponse(os.path.join(DASHBOARD_DIR, "index.html"))
 
 # ======================
 # API ENDPOINTS
 # ======================
 
-# 🔹 СОНГОСОН ЭМИЙН БҮХ ЭМИЙН САН
+@app.get("/products")
+def get_products():
+    return [
+        {"product_url": k, "product_name": v}
+        for k, v in PRODUCT_MAP.items()
+    ]
+
 @app.get("/pharmacies")
-def get_pharmacies(
-    product_url: str = Query(..., description="productMap URL")
-):
+def get_pharmacies(product_url: str = Query(...)):
     return fetch_all("""
         SELECT
             pharmacy,
@@ -103,28 +104,8 @@ def get_pharmacies(
         WHERE product_url = %s
         ORDER BY price ASC
     """, [product_url])
-# 🔹 ЭМИЙН ЖАГСААЛТ (нэр + url)
-@app.get("/products")
-def get_products():
-    return [
-        {
-            "product_url": "https://em.hdc.gov.mn/productMap/113",
-            "product_name": "Аминовит"
-        },
-        {
-            "product_url": "https://em.hdc.gov.mn/productMap/1155",
-            "product_name": "Урокер"
-        },
-        {
-            "product_url": "https://em.hdc.gov.mn/productMap/2017",
-            "product_name": "Панпирин Кю"
-        },
-        {
-            "product_url": "https://em.hdc.gov.mn/productMap/2344",
-            "product_name": "Альбуман"
-        }
-    ]
-    # ======================
+
+# ======================
 # EXCEL EXPORT
 # ======================
 @app.get("/export/excel")
@@ -149,13 +130,11 @@ def export_excel(
     if not rows:
         return {"error": "Мэдээлэл олдсонгүй"}
 
-    # 🟢 DataFrame
     df = pd.DataFrame(rows)
 
-    # 🟢 ЭМИЙН НЭР НЭМЭХ
+    # Эмийн нэр
     df.insert(0, "Эмийн нэр", PRODUCT_MAP.get(product_url, product_url))
 
-    # 🟢 Column нэрсийг Монгол болгох
     df.rename(columns={
         "scraped_date": "Огноо",
         "pharmacy": "Эмийн сан",
@@ -164,7 +143,6 @@ def export_excel(
         "phone": "Утас"
     }, inplace=True)
 
-    # 🟢 Файл нэр
     today = datetime.now().strftime("%Y%m%d")
     filename = f"em_price_{today}.xlsx"
     filepath = f"/tmp/{filename}"
@@ -176,6 +154,3 @@ def export_excel(
         filename=filename,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
-
