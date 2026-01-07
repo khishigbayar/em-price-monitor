@@ -93,24 +93,16 @@ async function loadProducts() {
 // LOAD PHARMACIES
 // =====================
 async function loadPharmacies(productUrl) {
-    try {
-        const res = await fetch(
-            API + "/pharmacies?product_url=" + encodeURIComponent(productUrl)
-        );
+    const res = await fetch(
+        API + "/pharmacies?product_url=" + encodeURIComponent(productUrl)
+    );
+    pharmacies = await res.json();
 
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(text);
-        }
-
-        pharmacies = await res.json();
-        renderList(pharmacies);
-
-    } catch (e) {
-        document.getElementById("debug").textContent =
-            "Pharmacies API алдаа: " + e.message;
-    }
+    // default: бага → их
+    pharmacies.sort((a, b) => a.price - b.price);
+    renderList(pharmacies);
 }
+
 
 // =====================
 // RENDER LIST
@@ -173,6 +165,17 @@ loadProducts();
     // 🔽 browser Excel татна
     window.location.href = url;
 }
+
+    document.getElementById("sortSelect").addEventListener("change", e => {
+    const order = e.target.value;
+
+    const sorted = [...pharmacies].sort((a, b) => {
+        if (order === "asc") return a.price - b.price;
+        return b.price - a.price;
+    });
+
+    renderList(sorted);
+});
     
 </script>
 
