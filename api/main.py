@@ -108,6 +108,8 @@ def get_pharmacies(product_url: str = Query(...)):
 # ======================
 # EXCEL EXPORT
 # ======================
+from datetime import datetime
+
 @app.get("/export/excel")
 def export_excel(
     product_url: str,
@@ -117,6 +119,7 @@ def export_excel(
     rows = fetch_all("""
         SELECT
             scraped_date,
+            last_date,
             pharmacy,
             price,
             address,
@@ -135,16 +138,17 @@ def export_excel(
     # Эмийн нэр
     df.insert(0, "Эмийн нэр", PRODUCT_MAP.get(product_url, product_url))
 
+    # Монгол багана
     df.rename(columns={
-        "scraped_date": "Огноо",
+        "scraped_date": "Татсан огноо",
+        "last_date": "Сүүлд борлуулсан огноо",
         "pharmacy": "Эмийн сан",
         "price": "Үнэ (₮)",
         "address": "Хаяг",
         "phone": "Утас"
     }, inplace=True)
 
-    today = datetime.now().strftime("%Y%m%d")
-    filename = f"em_price_{today}.xlsx"
+    filename = f"em_price_{datetime.now().strftime('%Y%m%d')}.xlsx"
     filepath = f"/tmp/{filename}"
 
     df.to_excel(filepath, index=False)
