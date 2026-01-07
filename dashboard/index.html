@@ -10,12 +10,15 @@
             background: #f4f6f8;
             padding: 20px;
         }
-        select, input {
+        select, input, button {
             padding: 8px;
             font-size: 16px;
             width: 100%;
             max-width: 500px;
             margin-bottom: 10px;
+        }
+        button {
+            cursor: pointer;
         }
         .card {
             background: white;
@@ -26,6 +29,9 @@
         .price {
             color: green;
             font-weight: bold;
+        }
+        h2, h3 {
+            margin-top: 25px;
         }
     </style>
 </head>
@@ -38,20 +44,17 @@
 <input id="search" placeholder="Эмийн сангийн нэр бичнэ үү">
 
 <h3>📥 Excel татах (огноогоор)</h3>
-
 <input type="date" id="startDate">
 <input type="date" id="endDate">
-
 <button onclick="downloadExcel()">Excel татах</button>
 
-
-<h3>🏪 Эмийн сангийн жагсаалт</h3>
 <h3>↕️ Эрэмбэлэх</h3>
-
 <select id="sortSelect">
     <option value="asc">Үнэ: Бага → Их</option>
     <option value="desc">Үнэ: Их → Бага</option>
 </select>
+
+<h3>🏪 Эмийн сангийн жагсаалт</h3>
 <div id="list"></div>
 
 <pre id="debug" style="color:red"></pre>
@@ -93,16 +96,27 @@ async function loadProducts() {
 // LOAD PHARMACIES
 // =====================
 async function loadPharmacies(productUrl) {
-    const res = await fetch(
-        API + "/pharmacies?product_url=" + encodeURIComponent(productUrl)
-    );
-    pharmacies = await res.json();
+    try {
+        const res = await fetch(
+            API + "/pharmacies?product_url=" + encodeURIComponent(productUrl)
+        );
 
-    // default: бага → их
-    pharmacies.sort((a, b) => a.price - b.price);
-    renderList(pharmacies);
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text);
+        }
+
+        pharmacies = await res.json();
+
+        // default: бага → их
+        pharmacies.sort((a, b) => a.price - b.price);
+        renderList(pharmacies);
+
+    } catch (e) {
+        document.getElementById("debug").textContent =
+            "Pharmacies API алдаа: " + e.message;
+    }
 }
-
 
 // =====================
 // RENDER LIST
@@ -110,6 +124,11 @@ async function loadPharmacies(productUrl) {
 function renderList(data) {
     const list = document.getElementById("list");
     list.innerHTML = "";
+
+    if (data.length === 0) {
+        list.innerHTML = "<i>Мэдээлэл олдсонгүй</i>";
+        return;
+    }
 
     data.forEach(p => {
         const div = document.createElement("div");
@@ -136,16 +155,31 @@ document.getElementById("search").addEventListener("input", e => {
     );
 });
 
-document.getElementById("productSelect")
-    .addEventListener("change", e => {
-        loadPharmacies(e.target.value);
+// =====================
+// SORT
+// =====================
+document.getElementById("sortSelect").addEventListener("change", e => {
+    const order = e.target.value;
+
+    const sorted = [...pharmacies].sort((a, b) => {
+        if (order === "asc") return a.price - b.price;
+        return b.price - a.price;
     });
 
-// INIT
-loadProducts();
+    renderList(sorted);
+});
 
+// =====================
+// PRODUCT CHANGE
+// =====================
+document.getElementById("productSelect").addEventListener("change", e => {
+    loadPharmacies(e.target.value);
+});
 
-    function downloadExcel() {
+// =====================
+// EXCEL DOWNLOAD
+// =====================
+function downloadExcel() {
     const productUrl = document.getElementById("productSelect").value;
     const startDate = document.getElementById("startDate").value;
     const endDate = document.getElementById("endDate").value;
@@ -162,21 +196,11 @@ loadProducts();
         "&start_date=" + startDate +
         "&end_date=" + endDate;
 
-    // 🔽 browser Excel татна
     window.location.href = url;
 }
 
-    document.getElementById("sortSelect").addEventListener("change", e => {
-    const order = e.target.value;
-
-    const sorted = [...pharmacies].sort((a, b) => {
-        if (order === "asc") return a.price - b.price;
-        return b.price - a.price;
-    });
-
-    renderList(sorted);
-});
-    
+// INIT
+loadProducts();
 </script>
 
 </body>
