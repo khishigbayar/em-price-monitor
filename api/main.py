@@ -77,15 +77,6 @@ def serve_dashboard():
 # API ENDPOINTS
 # ======================
 
-# 🔹 БҮХ ЭМ (product_url list)
-@app.get("/products")
-def get_products():
-    return fetch_all("""
-        SELECT DISTINCT product_url
-        FROM price_history
-        ORDER BY product_url
-    """)
-
 # 🔹 СОНГОСОН ЭМИЙН БҮХ ЭМИЙН САН
 @app.get("/pharmacies")
 def get_pharmacies(
