@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Env
+.env
+
+# Logs
+logs/
+*.log
+
+# Output files
+*.xlsx
+*.json
+
+.DS_Store
+.idea/
+.vscode/

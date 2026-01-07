@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <title>Эмийн үнийн мониторинг</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 20px;
+        }
+        select, input {
+            padding: 8px;
+            font-size: 16px;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 10px;
+        }
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .price {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h2>💊 Эм сонгох</h2>
+<select id="productSelect"></select>
+
+<h3>🔍 Эмийн сангаар хайх</h3>
+<input id="search" placeholder="Эмийн сангийн нэр бичнэ үү">
+
+<h3>🏪 Эмийн сангийн жагсаалт</h3>
+<div id="list"></div>
+
+<pre id="debug" style="color:red"></pre>
+
+<script>
+const API = "http://103.50.205.83:8000";
+let pharmacies = [];
+
+// =====================
+// LOAD PRODUCTS
+// =====================
+async function loadProducts() {
+    try {
+        const res = await fetch(API + "/products");
+        const data = await res.json();
+
+        const select = document.getElementById("productSelect");
+        select.innerHTML = "";
+
+        data.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.product_url;
+            opt.textContent = p.product_url; // дараа нь нэр болгоно
+            select.appendChild(opt);
+        });
+
+        if (data.length > 0) {
+            select.value = data[0].product_url;
+            loadPharmacies(data[0].product_url);
+        }
+
+    } catch (e) {
+        document.getElementById("debug").textContent = e.toString();
+    }
+}
+
+// =====================
+// LOAD PHARMACIES
+// =====================
+async function loadPharmacies(productUrl) {
+    try {
+        const res = await fetch(
+            API + "/pharmacies?product_url=" + encodeURIComponent(productUrl)
+        );
+
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text);
+        }
+
+        pharmacies = await res.json();
+        renderList(pharmacies);
+
+    } catch (e) {
+        document.getElementById("debug").textContent =
+            "API алдаа: " + e.message;
+    }
+}
+
+// =====================
+// RENDER LIST
+// =====================
+function renderList(data) {
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    data.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `
+            <div><b>${p.pharmacy}</b></div>
+            <div class="price">${p.price.toLocaleString()} ₮</div>
+            <div>${p.address || ""}</div>
+            <div>${p.phone || ""}</div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// =====================
+// SEARCH
+// =====================
+document.getElementById("search").addEventListener("input", e => {
+    const q = e.target.value.toLowerCase();
+    renderList(
+        pharmacies.filter(p =>
+            p.pharmacy.toLowerCase().includes(q)
+        )
+    );
+});
+
+document.getElementById("productSelect")
+    .addEventListener("change", e => {
+        loadPharmacies(e.target.value);
+    });
+
+loadProducts();
+</script>
+
+</body>
+</html>
