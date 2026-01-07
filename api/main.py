@@ -101,3 +101,25 @@ def get_pharmacies(
         WHERE product_url = %s
         ORDER BY price ASC
     """, [product_url])
+# 🔹 ЭМИЙН ЖАГСААЛТ (нэр + url)
+@app.get("/products")
+def get_products():
+    return [
+        {
+            "product_url": "https://em.hdc.gov.mn/productMap/113",
+            "product_name": "Виферон 500,000"
+        },
+        {
+            "product_url": "https://em.hdc.gov.mn/productMap/1155",
+            "product_name": "Виферон 1,000,000"
+        },
+        {
+            "product_url": "https://em.hdc.gov.mn/productMap/2017",
+            "product_name": "Виферон 3,000,000"
+        },
+        {
+            "product_url": "https://em.hdc.gov.mn/productMap/2344",
+            "product_name": "Виферон 150,000"
+        }
+    ]
+
