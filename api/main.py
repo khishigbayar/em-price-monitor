@@ -116,4 +116,44 @@ def get_products():
             "product_name": "Альбуман"
         }
     ]
+    # ======================
+# EXCEL EXPORT
+# ======================
+@app.get("/export/excel")
+def export_excel(
+    product_url: str,
+    start_date: str,
+    end_date: str
+):
+    sql = """
+        SELECT
+            scraped_date AS "Огноо",
+            pharmacy AS "Эмийн сан",
+            price AS "Үнэ",
+            address AS "Хаяг",
+            phone AS "Утас"
+        FROM price_history
+        WHERE product_url = %s
+          AND scraped_date BETWEEN %s AND %s
+        ORDER BY scraped_date, price
+    """
+
+    rows = fetch_all(sql, [product_url, start_date, end_date])
+
+    if not rows:
+        return {"error": "Мэдээлэл олдсонгүй"}
+
+    df = pd.DataFrame(rows)
+
+    filename = f"price_{start_date}_{end_date}.xlsx"
+    filepath = os.path.join("/tmp", filename)
+
+    df.to_excel(filepath, index=False)
+
+    return FileResponse(
+        path=filepath,
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 
