@@ -60,7 +60,8 @@ async function loadProducts() {
         data.forEach(p => {
             const opt = document.createElement("option");
             opt.value = p.product_url;
-            opt.textContent = p.product_url; // дараа нь нэр болгоно
+            opt.textContent = p.product_name;
+            opt.value = p.product_url;
             select.appendChild(opt);
         });
 
