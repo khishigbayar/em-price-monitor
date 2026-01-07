@@ -12,6 +12,14 @@ from psycopg2.extras import RealDictCursor
 import os
 from dotenv import load_dotenv
 
+# ============================
+PRODUCT_MAP = {
+    "https://em.hdc.gov.mn/productMap/113": "Аминовит",
+    "https://em.hdc.gov.mn/productMap/1155": "Урокер",
+    "https://em.hdc.gov.mn/productMap/2017": "Панпирин Кю",
+    "https://em.hdc.gov.mn/productMap/2344": "Альбуман",
+}
+
 # ======================
 # ENV
 # ======================
@@ -125,28 +133,41 @@ def export_excel(
     start_date: str,
     end_date: str
 ):
-    sql = """
+    rows = fetch_all("""
         SELECT
-            scraped_date AS "Огноо",
-            pharmacy AS "Эмийн сан",
-            price AS "Үнэ",
-            address AS "Хаяг",
-            phone AS "Утас"
+            scraped_date,
+            pharmacy,
+            price,
+            address,
+            phone
         FROM price_history
         WHERE product_url = %s
           AND scraped_date BETWEEN %s AND %s
         ORDER BY scraped_date, price
-    """
-
-    rows = fetch_all(sql, [product_url, start_date, end_date])
+    """, [product_url, start_date, end_date])
 
     if not rows:
         return {"error": "Мэдээлэл олдсонгүй"}
 
+    # 🟢 DataFrame
     df = pd.DataFrame(rows)
 
-    filename = f"price_{start_date}_{end_date}.xlsx"
-    filepath = os.path.join("/tmp", filename)
+    # 🟢 ЭМИЙН НЭР НЭМЭХ
+    df.insert(0, "Эмийн нэр", PRODUCT_MAP.get(product_url, product_url))
+
+    # 🟢 Column нэрсийг Монгол болгох
+    df.rename(columns={
+        "scraped_date": "Огноо",
+        "pharmacy": "Эмийн сан",
+        "price": "Үнэ (₮)",
+        "address": "Хаяг",
+        "phone": "Утас"
+    }, inplace=True)
+
+    # 🟢 Файл нэр
+    today = datetime.now().strftime("%Y%m%d")
+    filename = f"em_price_{today}.xlsx"
+    filepath = f"/tmp/{filename}"
 
     df.to_excel(filepath, index=False)
 
@@ -155,5 +176,6 @@ def export_excel(
         filename=filename,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 
