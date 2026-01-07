@@ -1,13 +1,10 @@
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-import re
+from playwright.sync_api import sync_playwright
+import psycopg2
 import os
+from datetime import date
 from dotenv import load_dotenv
 
 load_dotenv()
-from datetime import date
-import psycopg2
 
 URLS = [
     "https://em.hdc.gov.mn/productMap/2344",
@@ -15,8 +12,6 @@ URLS = [
     "https://em.hdc.gov.mn/productMap/1155",
     "https://em.hdc.gov.mn/productMap/113",
 ]
-
-HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
@@ -26,69 +21,61 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD"),
 }
 
-def parse_page(url):
-    res = requests.get(url, headers=HEADERS, timeout=30)
-    soup = BeautifulSoup(res.text, "html.parser")
-
-    rows = []
-    cards = soup.select(".pharmacy-card")
-
-    for card in cards:
-        name = card.select_one(".pharmacy-name span")
-        address = card.select_one(".address")
-        phone = card.select_one(".phone")
-
-        price_raw = card.get("data-price") or ""
-        price = int(re.sub(r"[^\d]", "", price_raw)) if price_raw else None
-
-        rows.append({
-            "product_url": url,
-            "pharmacy": name.text.strip() if name else None,
-            "address": address.text.strip() if address else None,
-            "phone": phone.text.strip() if phone else None,
-            "price": price,
-            "scraped_date": date.today(),
-        })
-
-    return rows
-
 def save_to_db(rows):
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
-
     for r in rows:
         cur.execute("""
             INSERT INTO price_history
-            (product_url, pharmacy, address, phone, price, scraped_date)
-            VALUES (%s,%s,%s,%s,%s,%s)
+            (product_url, pharmacy, address, phone, price, last_date, scraped_date)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
         """, (
             r["product_url"],
             r["pharmacy"],
             r["address"],
             r["phone"],
             r["price"],
-            r["scraped_date"],
+            r["last_date"],
+            date.today(),
         ))
-
     conn.commit()
     cur.close()
     conn.close()
 
+def scrape():
+    rows = []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        for url in URLS:
+            print("Processing:", url)
+            page.goto(url, timeout=60000)
+
+            # JS бүрэн ачааллыг хүлээнэ
+            page.wait_for_timeout(3000)
+
+            locations = page.evaluate("locations")
+
+            for l in locations:
+                rows.append({
+                    "product_url": url,
+                    "pharmacy": l.get("hs_name"),
+                    "address": l.get("hs_address"),
+                    "phone": l.get("hs_phone"),
+                    "price": l.get("last_price"),
+                    "last_date": l.get("last_date"),
+                })
+
+        browser.close()
+
+    return rows
+
 def main():
-    all_rows = []
-
-    for url in URLS:
-        print(f"Processing: {url}")
-        rows = parse_page(url)
-        print(f"  Found {len(rows)} pharmacies")
-        all_rows.extend(rows)
-
-    save_to_db(all_rows)
-    print("Saved to PostgreSQL ✅")
-
-    # Excel (optional)
-    df = pd.DataFrame(all_rows)
-    df.to_excel("pharmacy_today.xlsx", index=False)
+    rows = scrape()
+    save_to_db(rows)
+    print(f"Saved {len(rows)} rows ✅")
 
 if __name__ == "__main__":
     main()
