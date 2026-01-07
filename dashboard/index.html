@@ -50,26 +50,24 @@ let pharmacies = [];
 // LOAD PRODUCTS
 // =====================
 async function loadProducts() {
-    try {
-        const res = await fetch(API + "/products");
-        const data = await res.json();
+    const res = await fetch(API + "/products");
+    const data = await res.json();
 
-        const select = document.getElementById("productSelect");
-        select.innerHTML = "";
+    const select = document.getElementById("productSelect");
+    select.innerHTML = "";
 
-        data.forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.product_url;
-            opt.textContent = p.product_name;
-            opt.value = p.product_url;
-            select.appendChild(opt);
-        });
+    data.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.product_url;      // backend-д дамжих
+        opt.textContent = p.product_name; // user-д харагдах
+        select.appendChild(opt);
+    });
 
-        if (data.length > 0) {
-            select.value = data[0].product_url;
-            loadPharmacies(data[0].product_url);
-        }
-
+    if (data.length > 0) {
+        select.value = data[0].product_url;
+        loadPharmacies(data[0].product_url);
+    }
+}
     } catch (e) {
         document.getElementById("debug").textContent = e.toString();
     }
