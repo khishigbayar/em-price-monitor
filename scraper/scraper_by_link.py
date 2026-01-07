@@ -4,10 +4,10 @@ import pandas as pd
 import re
 import os
 from dotenv import load_dotenv
-
-load_dotenv()
 from datetime import date
 import psycopg2
+
+load_dotenv()
 
 URLS = [
     "https://em.hdc.gov.mn/productMap/2344",
@@ -16,7 +16,9 @@ URLS = [
     "https://em.hdc.gov.mn/productMap/113",
 ]
 
-HEADERS = {"User-Agent": "Mozilla/5.0"}
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; EM-Price-Bot/1.0)"
+}
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
@@ -27,29 +29,36 @@ DB_CONFIG = {
 }
 
 def parse_page(url):
+    print(f"🔍 Fetching {url}")
     res = requests.get(url, headers=HEADERS, timeout=30)
-    soup = BeautifulSoup(res.text, "html.parser")
+    res.raise_for_status()
 
-    rows = []
+    soup = BeautifulSoup(res.text, "html.parser")
     cards = soup.select(".pharmacy-card")
 
-    for card in cards:
-        name = card.select_one(".pharmacy-name span")
-        address = card.select_one(".address")
-        phone = card.select_one(".phone")
+    rows = []
 
-        price_raw = card.get("data-price") or ""
-        price = int(re.sub(r"[^\d]", "", price_raw)) if price_raw else None
+    for card in cards:
+        name_el = card.select_one(".pharmacy-name span")
+        address_el = card.select_one(".address")
+        phone_el = card.select_one(".phone")
+
+        price_raw = card.get("data-price")
+        if not price_raw:
+            continue
+
+        price = int(re.sub(r"[^\d]", "", price_raw))
 
         rows.append({
             "product_url": url,
-            "pharmacy": name.text.strip() if name else None,
-            "address": address.text.strip() if address else None,
-            "phone": phone.text.strip() if phone else None,
+            "pharmacy": name_el.text.strip() if name_el else None,
+            "address": address_el.text.strip() if address_el else None,
+            "phone": phone_el.text.strip() if phone_el else None,
             "price": price,
             "scraped_date": date.today(),
         })
 
+    print(f"  ✅ Found {len(rows)} pharmacies")
     return rows
 
 def save_to_db(rows):
@@ -78,17 +87,22 @@ def main():
     all_rows = []
 
     for url in URLS:
-        print(f"Processing: {url}")
-        rows = parse_page(url)
-        print(f"  Found {len(rows)} pharmacies")
-        all_rows.extend(rows)
+        try:
+            rows = parse_page(url)
+            all_rows.extend(rows)
+        except Exception as e:
+            print(f"❌ Error on {url}: {e}")
+
+    if not all_rows:
+        print("⚠️ No data scraped")
+        return
 
     save_to_db(all_rows)
-    print("Saved to PostgreSQL ✅")
+    print("🗄 Saved to PostgreSQL ✅")
 
-    # Excel (optional)
     df = pd.DataFrame(all_rows)
     df.to_excel("pharmacy_today.xlsx", index=False)
+    print("📄 Excel saved")
 
 if __name__ == "__main__":
     main()
