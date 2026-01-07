@@ -50,26 +50,28 @@ let pharmacies = [];
 // LOAD PRODUCTS
 // =====================
 async function loadProducts() {
-    const res = await fetch(API + "/products");
-    const data = await res.json();
+    try {
+        const res = await fetch(API + "/products");
+        const data = await res.json();
 
-    const select = document.getElementById("productSelect");
-    select.innerHTML = "";
+        const select = document.getElementById("productSelect");
+        select.innerHTML = "";
 
-    data.forEach(p => {
-        const opt = document.createElement("option");
-        opt.value = p.product_url;      // backend-д дамжих
-        opt.textContent = p.product_name; // user-д харагдах
-        select.appendChild(opt);
-    });
+        data.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p.product_url;        // backend-д дамжина
+            opt.textContent = p.product_name; // хэрэглэгчид харагдана
+            select.appendChild(opt);
+        });
 
-    if (data.length > 0) {
-        select.value = data[0].product_url;
-        loadPharmacies(data[0].product_url);
-    }
-}
+        if (data.length > 0) {
+            select.value = data[0].product_url;
+            loadPharmacies(data[0].product_url);
+        }
+
     } catch (e) {
-        document.getElementById("debug").textContent = e.toString();
+        document.getElementById("debug").textContent =
+            "Products API алдаа: " + e.message;
     }
 }
 
@@ -92,7 +94,7 @@ async function loadPharmacies(productUrl) {
 
     } catch (e) {
         document.getElementById("debug").textContent =
-            "API алдаа: " + e.message;
+            "Pharmacies API алдаа: " + e.message;
     }
 }
 
@@ -133,6 +135,7 @@ document.getElementById("productSelect")
         loadPharmacies(e.target.value);
     });
 
+// INIT
 loadProducts();
 </script>
 
