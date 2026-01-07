@@ -37,6 +37,14 @@
 <h3>🔍 Эмийн сангаар хайх</h3>
 <input id="search" placeholder="Эмийн сангийн нэр бичнэ үү">
 
+<h3>📥 Excel татах (огноогоор)</h3>
+
+<input type="date" id="startDate">
+<input type="date" id="endDate">
+
+<button onclick="downloadExcel()">Excel татах</button>
+
+
 <h3>🏪 Эмийн сангийн жагсаалт</h3>
 <div id="list"></div>
 
@@ -137,6 +145,29 @@ document.getElementById("productSelect")
 
 // INIT
 loadProducts();
+
+
+    function downloadExcel() {
+    const productUrl = document.getElementById("productSelect").value;
+    const startDate = document.getElementById("startDate").value;
+    const endDate = document.getElementById("endDate").value;
+
+    if (!productUrl || !startDate || !endDate) {
+        alert("Эм болон огноо сонгоно уу");
+        return;
+    }
+
+    const url =
+        API +
+        "/export/excel" +
+        "?product_url=" + encodeURIComponent(productUrl) +
+        "&start_date=" + startDate +
+        "&end_date=" + endDate;
+
+    // 🔽 browser Excel татна
+    window.location.href = url;
+}
+    
 </script>
 
 </body>
