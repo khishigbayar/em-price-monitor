@@ -154,7 +154,10 @@ def export_excel(
     df.to_excel(filepath, index=False)
 
     return FileResponse(
-        path=filepath,
-        filename=filename,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    path=filepath,
+    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    filename=filename,
+    headers={
+        "Content-Disposition": f'attachment; filename="{filename}"'
+    }
+)
