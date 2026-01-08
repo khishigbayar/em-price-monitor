@@ -10,52 +10,124 @@
             background: #f4f6f8;
             padding: 20px;
         }
-        select, input, button {
-            padding: 8px;
-            font-size: 16px;
-            width: 100%;
-            max-width: 500px;
-            margin-bottom: 10px;
+
+        /* ===== TOP CONTROLS ===== */
+        .top-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            max-width: 1000px;
         }
+
+        label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        select, input, button {
+            padding: 6px;
+            font-size: 14px;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
         button {
             cursor: pointer;
+            background: #1976d2;
+            color: white;
+            border: none;
         }
-        .card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
+
+        button:hover {
+            background: #135ba1;
+        }
+
+        h2 {
             margin-bottom: 10px;
         }
-        .price {
-            color: green;
-            font-weight: bold;
+
+        h3 {
+            margin-top: 15px;
+            margin-bottom: 6px;
         }
-        h2, h3 {
-            margin-top: 25px;
+
+        /* ===== PHARMACY LIST GRID ===== */
+        #list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .card {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            transition: 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        .price {
+            color: #1a9b3b;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            #list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .top-controls {
+                grid-template-columns: 1fr;
+            }
+
+            #list {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
 
+<h2>💊 Эмийн үнийн мониторинг</h2>
+
+<!-- ===== TOP CONTROLS ===== -->
 <div class="top-controls">
     <div>
-        <label>💊 Эм сонгох</label>
+        <label>Эм сонгох</label>
         <select id="productSelect"></select>
     </div>
 
     <div>
-        <label>🔍 Эмийн сан хайх</label>
+        <label>Эмийн сан хайх</label>
         <input id="search" placeholder="Эмийн сангийн нэр">
     </div>
 </div>
 
 <h3>📥 Excel татах (огноогоор)</h3>
-<input type="date" id="startDate">
-<input type="date" id="endDate">
-<button onclick="downloadExcel()">Excel татах</button>
+<div class="top-controls">
+    <input type="date" id="startDate">
+    <input type="date" id="endDate">
+</div>
+<button onclick="downloadExcel()" style="max-width:200px;margin-top:6px;">
+    Excel татах
+</button>
 
 <h3>↕️ Эрэмбэлэх</h3>
-<select id="sortSelect">
+<select id="sortSelect" style="max-width:250px;">
     <option value="asc">Үнэ: Бага → Их</option>
     <option value="desc">Үнэ: Их → Бага</option>
 </select>
@@ -69,9 +141,9 @@
 const API = "http://103.50.205.83:8000";
 let pharmacies = [];
 
-// =====================
-// LOAD PRODUCTS
-// =====================
+/* =====================
+   LOAD PRODUCTS
+===================== */
 async function loadProducts() {
     try {
         const res = await fetch(API + "/products");
@@ -82,8 +154,8 @@ async function loadProducts() {
 
         data.forEach(p => {
             const opt = document.createElement("option");
-            opt.value = p.product_url;        // backend-д дамжина
-            opt.textContent = p.product_name; // хэрэглэгчид харагдана
+            opt.value = p.product_url;
+            opt.textContent = p.product_name;
             select.appendChild(opt);
         });
 
@@ -98,9 +170,9 @@ async function loadProducts() {
     }
 }
 
-// =====================
-// LOAD PHARMACIES
-// =====================
+/* =====================
+   LOAD PHARMACIES
+===================== */
 async function loadPharmacies(productUrl) {
     try {
         const res = await fetch(
@@ -108,13 +180,10 @@ async function loadPharmacies(productUrl) {
         );
 
         if (!res.ok) {
-            const text = await res.text();
-            throw new Error(text);
+            throw new Error(await res.text());
         }
 
         pharmacies = await res.json();
-
-        // default: бага → их
         pharmacies.sort((a, b) => a.price - b.price);
         renderList(pharmacies);
 
@@ -124,9 +193,9 @@ async function loadPharmacies(productUrl) {
     }
 }
 
-// =====================
-// RENDER LIST
-// =====================
+/* =====================
+   RENDER LIST
+===================== */
 function renderList(data) {
     const list = document.getElementById("list");
     list.innerHTML = "";
@@ -149,9 +218,9 @@ function renderList(data) {
     });
 }
 
-// =====================
-// SEARCH
-// =====================
+/* =====================
+   SEARCH
+===================== */
 document.getElementById("search").addEventListener("input", e => {
     const q = e.target.value.toLowerCase();
     renderList(
@@ -161,30 +230,29 @@ document.getElementById("search").addEventListener("input", e => {
     );
 });
 
-// =====================
-// SORT
-// =====================
+/* =====================
+   SORT
+===================== */
 document.getElementById("sortSelect").addEventListener("change", e => {
     const order = e.target.value;
 
-    const sorted = [...pharmacies].sort((a, b) => {
-        if (order === "asc") return a.price - b.price;
-        return b.price - a.price;
-    });
+    const sorted = [...pharmacies].sort((a, b) =>
+        order === "asc" ? a.price - b.price : b.price - a.price
+    );
 
     renderList(sorted);
 });
 
-// =====================
-// PRODUCT CHANGE
-// =====================
+/* =====================
+   PRODUCT CHANGE
+===================== */
 document.getElementById("productSelect").addEventListener("change", e => {
     loadPharmacies(e.target.value);
 });
 
-// =====================
-// EXCEL DOWNLOAD
-// =====================
+/* =====================
+   EXCEL DOWNLOAD
+===================== */
 function downloadExcel() {
     const productUrl = document.getElementById("productSelect").value;
     const startDate = document.getElementById("startDate").value;
@@ -205,7 +273,7 @@ function downloadExcel() {
     window.location.href = url;
 }
 
-// INIT
+/* INIT */
 loadProducts();
 </script>
 
